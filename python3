@@ -1,0 +1,165 @@
+import os
+import subprocess
+import tkinter as tk
+from tkinter import filedialog, messagebox
+from PIL import Image, ImageTk
+
+# Function to launch Doom with the selected IWAD and optional PWADs
+def launch_doom(custom_doom_path, iwads_path, pwad_paths=None, resolution=None, texture_pack=None, sound_level=None, fullscreen=False):
+    if not os.path.exists(custom_doom_path):
+        print("Error: Custom Doom executable not found.")
+        return
+    
+    if not os.path.exists(iwads_path):
+        print("Error: IWAD file not found.")
+        return
+    
+    command = [custom_doom_path, "-iwad", iwads_path]
+    
+    # Add PWADs
+    if pwad_paths:
+        for pwad in pwad_paths:
+            if os.path.exists(pwad):
+                command.extend(["-file", pwad])
+    
+    # Apply resolution if set
+    if resolution:
+        command.extend(["-width", str(resolution[0]), "-height", str(resolution[1])])
+    
+    # Apply texture pack if set
+    if texture_pack and os.path.exists(texture_pack):
+        command.extend(["-texturepack", texture_pack])
+    
+    # Apply sound level if set
+    if sound_level:
+        command.extend(["-sndlevel", str(sound_level)])
+
+    if fullscreen:
+        command.append("-fullscreen")
+    
+    print("Launching Custom Doom with:", " ".join(command))
+    subprocess.run(command)
+
+# Function to open file dialog to select files
+def select_file(file_type):
+    return filedialog.askopenfilename(title=f"Select {file_type}", filetypes=[("WAD Files", "*.wad"), ("All Files", "*.*")]) or ""
+
+# Function to run the GUI
+def run_gui():
+    root = tk.Tk()
+    root.title("BlackOut Doom Loader")
+    root.geometry("3000x3000")  # Window size
+    root.configure(bg="black")
+
+    # Load background GIF if available
+    bg_image_path = "background.gif"
+    if os.path.exists(bg_image_path):
+        bg_image = Image.open(bg_image_path).resize((800, 600), Image.ANTIALIAS)
+        bg_photo = ImageTk.PhotoImage(bg_image)
+        bg_label = tk.Label(root, image=bg_photo)
+        bg_label.place(relwidth=1, relheight=1)
+    else:
+        print("Warning: background.gif not found! Running without a background.")
+
+    doom_font = ("Courier", 14, "bold")
+
+    # Doom Executable Section
+    tk.Label(root, text="Select Doom Executable:", font=doom_font, fg="red", bg="black").grid(row=0, column=0, pady=5, sticky="w", padx=10)
+    doom_exe_entry = tk.Entry(root, width=50, font=doom_font)
+    doom_exe_entry.grid(row=0, column=1, pady=5, padx=10)
+    tk.Button(root, text="Browse", font=doom_font, fg="white", bg="red",
+              command=lambda: doom_exe_entry.insert(tk.END, select_file("Doom Executable"))).grid(row=0, column=2, pady=5, padx=10)
+
+    # IWAD Selection
+    tk.Label(root, text="Select IWAD:", font=doom_font, fg="red", bg="black").grid(row=1, column=0, pady=5, sticky="w", padx=10)
+    
+    iwad_listbox = tk.Listbox(root, font=doom_font, selectmode=tk.SINGLE, bg="black", fg="white", height=6, width=50)
+    iwad_listbox.grid(row=1, column=1, columnspan=2, padx=20, sticky="ew")
+    iwad_listbox.insert(tk.END, "The Ultimate Doom")
+    iwad_listbox.insert(tk.END, "Doom II: Hell on Earth")
+    iwad_listbox.insert(tk.END, "TNT: Evilution")
+    iwad_listbox.insert(tk.END, "Plutonia: Experiment")
+    
+    # PWAD Selection (Optional)
+    tk.Label(root, text="Select PWADs (Optional):", font=doom_font, fg="red", bg="black").grid(row=2, column=0, pady=5, sticky="w", padx=10)
+    
+    pwad_listbox = tk.Listbox(root, font=doom_font, selectmode=tk.MULTIPLE, bg="black", fg="white", height=6, width=50)
+    pwad_listbox.grid(row=2, column=1, columnspan=2, padx=20, sticky="ew")
+    
+    # Add PWAD Button
+    def add_pwad():
+        pwad_path = select_file("PWAD File")
+        if pwad_path:
+            pwad_listbox.insert(tk.END, pwad_path)
+    
+    tk.Button(root, text="Add PWAD", font=doom_font, fg="white", bg="green", command=add_pwad).grid(row=3, column=0, pady=5, padx=10)
+    
+    # Remove PWAD Button
+    def remove_pwad():
+        selected_pwad_indices = pwad_listbox.curselection()
+        for index in selected_pwad_indices:
+            pwad_listbox.delete(index)
+    
+    tk.Button(root, text="Remove PWAD", font=doom_font, fg="white", bg="red", command=remove_pwad).grid(row=3, column=1, pady=5, padx=10)
+
+    # Resolution Settings
+    tk.Label(root, text="Set Resolution (Width x Height):", font=doom_font, fg="red", bg="black").grid(row=4, column=0, pady=5, sticky="w", padx=10)
+    resolution_width = tk.Entry(root, font=doom_font, width=10)
+    resolution_width.grid(row=4, column=1, pady=5, padx=10)
+    resolution_height = tk.Entry(root, font=doom_font, width=10)
+    resolution_height.grid(row=4, column=2, pady=5, padx=10)
+    tk.Label(root, text="Enter the desired screen resolution (e.g., 640 x 480).", font=doom_font, fg="white", bg="black").grid(row=5, column=0, columnspan=3, pady=5, padx=10)
+
+    # Texture Pack
+    tk.Label(root, text="Select Texture Pack (Optional):", font=doom_font, fg="red", bg="black").grid(row=6, column=0, pady=5, sticky="w", padx=10)
+    texture_pack_entry = tk.Entry(root, font=doom_font, width=50)
+    texture_pack_entry.grid(row=6, column=1, columnspan=2, pady=5, padx=10)
+    tk.Label(root, text="Optional: Choose a texture pack file to enhance the visuals.", font=doom_font, fg="white", bg="black").grid(row=7, column=0, columnspan=3, pady=5, padx=10)
+    
+    # Sound Level
+    tk.Label(root, text="Set Sound Level (0-255):", font=doom_font, fg="red", bg="black").grid(row=8, column=0, pady=5, sticky="w", padx=10)
+    sound_level_entry = tk.Entry(root, font=doom_font, width=10)
+    sound_level_entry.grid(row=8, column=1, pady=5, padx=10)
+    tk.Label(root, text="Optional: Set the sound level from 0 to 255 (0 is mute).", font=doom_font, fg="white", bg="black").grid(row=9, column=0, columnspan=3, pady=5, padx=10)
+
+    # Fullscreen Toggle
+    fullscreen_var = tk.BooleanVar()
+    fullscreen_checkbox = tk.Checkbutton(root, text="Fullscreen", font=doom_font, fg="white", bg="black", variable=fullscreen_var)
+    fullscreen_checkbox.grid(row=10, column=0, columnspan=3, pady=5, padx=10)
+
+    # Launch Button
+    def launch():
+        doom_exe = doom_exe_entry.get()
+        selected_iwad_index = iwad_listbox.curselection()
+        
+        if not selected_iwad_index:
+            messagebox.showerror("Error", "Please select an IWAD.")
+            return
+        
+        selected_iwad = iwad_listbox.get(selected_iwad_index)
+        iwad_path = os.path.join(os.path.dirname(doom_exe), selected_iwad)
+        
+        # Gather PWADs
+        pwad_paths = [pwad_listbox.get(i) for i in pwad_listbox.curselection()]
+        
+        # Gather additional settings
+        resolution = (int(resolution_width.get()), int(resolution_height.get())) if resolution_width.get() and resolution_height.get() else None
+        texture_pack = texture_pack_entry.get() if texture_pack_entry.get() else None
+        sound_level = int(sound_level_entry.get()) if sound_level_entry.get() else None
+
+        # Launch Doom with selected settings
+        launch_doom(doom_exe, iwad_path, pwad_paths, resolution, texture_pack, sound_level, fullscreen_var.get())
+
+    tk.Button(root, text="Launch Doom", font=doom_font, fg="black", bg="yellow", command=launch).grid(row=11, column=0, columnspan=3, pady=10)
+
+    # Close Button
+    def close():
+        root.quit()
+
+    tk.Button(root, text="Close", font=doom_font, fg="white", bg="red", command=close).grid(row=12, column=0, columnspan=3, pady=5)
+
+    root.mainloop()
+
+# Start the GUI when the script is executed
+if __name__ == "__main__":
+    run_gui()
